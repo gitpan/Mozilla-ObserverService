@@ -25,7 +25,7 @@ our @EXPORT = qw(
 	
 );
 
-our $VERSION = '0.01';
+our $VERSION = '0.02';
 
 require XSLoader;
 XSLoader::load('Mozilla::ObserverService', $VERSION);
@@ -44,12 +44,15 @@ Mozilla::ObserverService - Perl interface to the Mozilla nsIObserverService
 
     use Mozilla::ObserverService;
 
-    Mozilla::PromptService::Register({
+    my $cookie = Mozilla::PromptService::Register({
         'http-on-examine-response' => sub {
             my $http_channel = shift;
             print $http_channel->responseStatus;
         },
     });
+
+    # We don't need it anymore...
+    Mozilla::PromptService::Unregister($cookie);
 
 =head1 DESCRIPTION
 
@@ -58,7 +61,7 @@ register for notifications.
 
 For more detailed information see Mozilla's nsIObserverService documentation.
 
-=head1 METHODS
+=head1 FUNCTIONS
 
 =head2 Register($callbacks_hash)
 
@@ -67,6 +70,13 @@ specified by corresponding keys of the C<$callbacks_hash>.
 
 Note that all of those callbacks receive various mozilla's objects as
 parameters.
+
+Returns opaque cookie which can be used to unregister callbacks later.
+
+=head2 Unregister($cookie)
+
+Uses cookie obtained by C<Register> to unregister callbacks from observer
+service.
 
 =head1 CAVEAT
 
@@ -83,7 +93,7 @@ L<Mozilla::PromptService|Mozilla::PromptService>.
 
 =head1 AUTHOR
 
-Boris Sukholitko, E<lt>boris@gmail.comE<gt>
+Boris Sukholitko, E<lt>boriss@gmail.comE<gt>
 
 =head1 COPYRIGHT AND LICENSE
 

@@ -27,7 +27,7 @@ static const char *choose_subject_class(nsISupports *subj
 	return *res ? subj_class : 0;
 }
 
-SV *wrap_subject(void *subj, const char *subj_class) {
+static SV *wrap_subject(void *subj, const char *subj_class) {
 	SV *obj_ref;
 	SV *obj;
 
@@ -45,6 +45,36 @@ public:
 
 	SV *callbacks_;
 };
+
+static void remove_callback(nsIObserverService *os, MyObserver *obs
+			, const char *key) {
+	os->RemoveObserver(obs, key);
+}
+
+static void add_callback(nsIObserverService *os, MyObserver *obs
+			, const char *key) {
+	os->AddObserver(obs, key, PR_FALSE);
+}
+
+static int for_each_callback_do(SV *cbs, MyObserver *obs, void (*func) (
+			nsIObserverService *os, MyObserver *obs
+			, const char *key)) {
+	nsCOMPtr<nsIObserverService> os;
+	nsresult rv;
+	const char *key;
+	I32 klen;
+	HV *hv;
+
+	os = do_GetService("@mozilla.org/observer-service;1", &rv);
+	if (NS_FAILED(rv))
+		return rv;
+
+	hv = (HV*) SvRV(cbs);
+	hv_iterinit(hv);
+	while (hv_iternextsv(hv, (char **) &key, &klen))
+		func(os, obs, key);
+	return rv;
+}
 
 NS_IMPL_ISUPPORTS1(MyObserver, nsIObserver)
 
@@ -91,33 +121,38 @@ unsigned int responseStatus(SV *obj)
 
 MODULE = Mozilla::ObserverService		PACKAGE = Mozilla::ObserverService		
 
-int
+void *
 Register(cbs)
 	SV *cbs;
 	INIT:
 		nsresult rv;
-		nsCOMPtr<MyObserver> obs;
+		MyObserver *obs = 0;
 		nsCOMPtr<nsIObserverService> os;
-		const char *key;
-		I32 klen;
-		HV *hv;
 	CODE:
-		rv = !NS_OK;
 		obs = new MyObserver;
 		if (!obs)
-			goto out_retval;
+			XSRETURN_UNDEF;
 
-		os = do_GetService("@mozilla.org/observer-service;1", &rv);
-		if (NS_FAILED(rv))
-			goto out_retval;
-
-		hv = (HV*) SvRV(cbs);
-		hv_iterinit(hv);
-		while (hv_iternextsv(hv, (char **) &key, &klen)) {
-			rv = os->AddObserver(obs, key, PR_FALSE);
+		rv = for_each_callback_do(cbs, obs, add_callback);
+		if (NS_FAILED(rv)) {
+			delete obs;
+			XSRETURN_UNDEF;
 		}
 		obs->callbacks_ = newSVsv(cbs);
 out_retval:
-		RETVAL = (rv == NS_OK);
+		RETVAL = obs;
 	OUTPUT:
 		RETVAL
+
+int 
+Unregister(o_ptr)
+	void *o_ptr;
+	INIT:
+		MyObserver *obs;
+	CODE:
+		obs = (MyObserver *) o_ptr;
+		RETVAL = for_each_callback_do(obs->callbacks_, obs
+			 	, remove_callback);
+	OUTPUT:
+		RETVAL
+
