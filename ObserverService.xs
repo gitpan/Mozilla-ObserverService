@@ -4,11 +4,12 @@
 
 #include "ppport.h"
 
-#include <mozilla/nsCOMPtr.h>
-#include <mozilla/nsIObserver.h>
-#include <mozilla/nsIObserverService.h>
-#include <mozilla/nsIServiceManager.h>
-#include <mozilla/nsIHttpChannel.h>
+#include <nsCOMPtr.h>
+#include <nsIObserver.h>
+#include <nsIObserverService.h>
+#include <nsIServiceManager.h>
+#include <nsServiceManagerUtils.h>
+#include <nsIHttpChannel.h>
 
 static const char *choose_subject_class(nsISupports *subj
 		, const char *topic, void **res) {
