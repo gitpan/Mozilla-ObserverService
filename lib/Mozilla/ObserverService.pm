@@ -25,7 +25,7 @@ our @EXPORT = qw(
 	
 );
 
-our $VERSION = '0.03';
+our $VERSION = '0.04';
 
 require XSLoader;
 XSLoader::load('Mozilla::ObserverService', $VERSION);
@@ -47,7 +47,7 @@ Mozilla::ObserverService - Perl interface to the Mozilla nsIObserverService
     my $cookie = Mozilla::PromptService::Register({
         'http-on-examine-response' => sub {
             my $http_channel = shift;
-            print $http_channel->responseStatus;
+            print $http_channel->responseStatus . " at " . $http_channel->uri . "\n";
         },
     });
 
@@ -80,8 +80,8 @@ service.
 
 =head1 CAVEAT
 
-At present only nsIHttpChannel::responseStatus method is wrapped around in perl
-code (as shown in SYNOPSIS).
+At present only nsIHttpChannel::responseStatus and uri methods are wrapped
+around in perl code (as shown in SYNOPSIS).
 
 =head1 SEE ALSO
 

@@ -10,6 +10,8 @@
 #include <nsIServiceManager.h>
 #include <nsServiceManagerUtils.h>
 #include <nsIHttpChannel.h>
+#include <nsEmbedString.h>
+#include <nsIURI.h>
 
 static const char *choose_subject_class(nsISupports *subj
 		, const char *topic, void **res) {
@@ -17,7 +19,8 @@ static const char *choose_subject_class(nsISupports *subj
 	const char *subj_class = 0;
 
 	*res = 0;
-	if (!strcmp(topic, "http-on-examine-response")) {
+	if (!strcmp(topic, "http-on-examine-response")
+			|| !strcmp(topic, "http-on-modify-request")) {
 		id = &NS_GET_IID(nsIHttpChannel);
 		subj_class = "Mozilla::ObserverService::nsIHttpChannel";
 	}
@@ -119,6 +122,28 @@ unsigned int responseStatus(SV *obj)
 	OUTPUT:
 		RETVAL
 
+const char *uri(SV *obj)
+	PREINIT:
+		nsEmbedCString pre;
+		nsEmbedCString path;
+		nsCOMPtr<nsIURI> uri;
+		nsresult rv;
+		char res[1024];
+	CODE:
+		rv = ((nsIHttpChannel *) SvIV(SvRV(obj)))->GetURI(getter_AddRefs(uri));
+		if (NS_FAILED(rv) || !uri)
+			XSRETURN_UNDEF;
+
+		rv = uri->GetPrePath(pre);
+		if (NS_FAILED(rv))
+			XSRETURN_UNDEF;
+		rv = uri->GetPath(path);
+		if (NS_FAILED(rv))
+			XSRETURN_UNDEF;
+		snprintf(res, sizeof(res), "%s%s", pre.get(), path.get());
+		RETVAL = res;
+	OUTPUT:
+		RETVAL
 
 MODULE = Mozilla::ObserverService		PACKAGE = Mozilla::ObserverService		
 

@@ -1,7 +1,7 @@
 use strict;
 use warnings FATAL => 'all';
 
-use Test::More tests => 10;
+use Test::More tests => 12;
 use Mozilla::Mechanize;
 use URI::file;
 use File::Temp qw(tempdir);
@@ -17,8 +17,10 @@ exec('perl t/one_time_http.pl t/test.html') if !$pid;
 my $moz = Mozilla::Mechanize->new(quiet => 1, visible => 0);
 
 my @_last_call = ('NONE');
+my @_mreq;
 my $res = Mozilla::ObserverService::Register({
 	'http-on-examine-response' => sub { @_last_call = @_; },
+	'http-on-modify-request' => sub { @_mreq = @_; },
 });
 isnt($res, 0);
 
@@ -29,6 +31,8 @@ is($moz->title, "Test-forms Page");
 isnt($_last_call[0], 'NONE');
 isa_ok($_last_call[0], 'Mozilla::ObserverService::nsIHttpChannel');
 is($_last_call[0]->responseStatus, 200);
+isa_ok($_mreq[0], 'Mozilla::ObserverService::nsIHttpChannel');
+is($_mreq[0]->uri, $url) or exit 1;
 
 @_last_call = ();
 Mozilla::ObserverService::Unregister($res);
